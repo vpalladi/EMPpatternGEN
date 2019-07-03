@@ -2,7 +2,7 @@
 
 import random  
 import numpy as np
-
+import re
 
 class EMPword :
 
@@ -26,8 +26,10 @@ class EMPword :
 
         
 class EMPchannel :
-    def __init__(self) :
+    def __init__(self, quad='', link='') :
         self.chan = []
+        self.link = link
+        self.quadChannel = quad
 
     def addFrame(self, data) :
         self.chan.append(data)
@@ -65,7 +67,7 @@ class EMPchannel :
 
 class EMPpattern :
 
-    def __init__(self, boardName, nChannels) :
+    def __init__(self, boardName='', nChannels=0) :
         self.boardName = boardName
 
         self.header = 'Board '+boardName+'\n'
@@ -83,7 +85,41 @@ class EMPpattern :
         self.header = self.header+'\n'
 
         self.channels = [EMPchannel() for i in range(0, nChannels)]
-        
+
+    def loadPattern( self, fileName ) :
+        fileIn = open(fileName)
+        for line in fileIn.readlines() : 
+            if re.search( '^Board', line ) :
+                print( 'Board' )
+
+            elif re.search( '^Frame', line ) :
+                words = line.split(':')[1].split()
+                for word in words:
+                    v = word.split('v')[0]
+                    w = word.split('v')[1]
+                    dataFormat = len( w.replace(' ', '') )*4
+                    #empWord(w, v, dataFormat)
+                    
+                    ### add the frams to the correct channel!!!
+                    
+            elif re.search( '^\s*Quad', line ) :
+                quads = line.split(':')[1]
+                quads = re.sub( '^\s+' , '', quads ) 
+                quads = re.sub( '\s+' , ' ', quads ) 
+                
+                for q in quads :
+                    self.channels.append( EMPchannel( quad=q ) )
+                
+            elif re.search( '^\s*Link', line ) :
+                links = line.split(':')[1]
+                links = re.sub( '^\s+' , '', links ) 
+                links = re.sub( '\s+' , ' ', links ) 
+                
+                for i,l in enumerate(links) :
+                    self.channels[i].link = l
+ 
+            else :
+                print( 'Error' )
 
     def genRand( self, nFrames ) :
         for ch in self.channels :
@@ -99,7 +135,7 @@ class EMPpattern :
                 w = EMPword( value, True, 64 )
                 ch.addFrame( w )
             ch.addSOF()
-
+ 
     def print( self ) :
         print( self.header, end='' )
         nFrames = self.channels[0].nFrames()
@@ -111,6 +147,7 @@ class EMPpattern :
             print('')
 
             
-EP = EMPpattern('test', 72)
-EP.genSeq(100)
-EP.print()
+EP = EMPpattern()
+EP.loadPattern('injected_data.txt')
+#EP.genSeq(100)
+#EP.print()
