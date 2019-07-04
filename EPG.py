@@ -3,6 +3,7 @@
 import random  
 import numpy as np
 import re
+import matplotlib.pyplot as plt
 
 class EMPword :
 
@@ -64,6 +65,24 @@ class EMPchannel :
             print()
         print()
 
+    def getLatency(self, ch2) :
+        i=0
+        j=0
+        while self.chan[i].valid==0 :
+            i+=1
+        while ch2.chan[j].valid==0 :
+            j+=1
+        print(np.abs(i-j))
+				
+	def plotFrame(self):
+		X=[]
+		Y=[]
+		for fr in self.chan:
+			Y.append(fr)
+		plt.plot(X,Y)
+		plt.show()	
+		
+	
 
 class EMPpattern :
 
@@ -148,6 +167,10 @@ class EMPpattern :
 
             
 EP = EMPpattern()
-EP.loadPattern('injected_data.txt')
+EP.loadPattern('../ev9_n1_proc0.txt')
+channel1=EP.channels[0]
+channel2=EP.channels[1]
+print(channel2.chan)
+#channel1.getLatency(channel2)
 #EP.genSeq(100)
 #EP.print()
