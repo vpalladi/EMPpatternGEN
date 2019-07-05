@@ -93,7 +93,20 @@ class EMPchannel :
             plt.ylabel('Numbers sent')
             plt.xlabel('Frame number')
             plt.savefig('./demo.png')
-            plt.close()	
+            plt.close()
+	
+    def __eq__(self,ch2) :
+        self_list=[]
+        ch2_list=[]
+        for i in range(0, len(self.chan)):
+            if self.chan[i].valid==1 :
+                self_list.append(self.chan[i].word)
+            if ch2.chan[i].valid==1 :
+                ch2_list.append(ch2.chan[i].word)
+        if len(self_list)!=len(ch2_list):
+            return False
+        else:
+            return self_list==ch2_list
             
 
 class EMPpattern :
@@ -190,21 +203,33 @@ class EMPpattern :
                 ch.getFrame(iframe).printHex()
             print('')
 
+    def __eq__(self,EP2) : 
+        if self.nChannels!=EP2.nChannels:
+            return False
+        else:
+            i=0
+            while self.channels[i]==EP2.channels[i] and i<self.nChannels-1:
+                i+=1
+            return i==self.nChannels-1
+
+
+
 def main() :
     EP = EMPpattern()
     EP.loadPattern('../ev9_n1_proc0.txt')
-    channel1=EP.channels[0]
-    channel2=EP.channels[1]
-    #channel2.wordprint()
-    channel1.plotFrame()
-    #channel1.getFrame()
+    #channel1=EP.channels[0]
+    #channel2=EP.channels[1]
+    #channel1.plotFrame()
     #print(channel1.chan[6].word)
-    
+   
     #EP = EMPpattern(nChannels=10)
     #EP.genSeq(100)
-    channel1.getLatency(channel2)
+    EP2 = EMPpattern()
+    EP2.loadPattern('../ev9_n2_proc0.txt')
+    print(EP==EP2)
+    #channel1.getLatency(channel2)
+    #print(EP==EP)
     #EP.genSeq(100)
-    
     #EP.print()
 
 
