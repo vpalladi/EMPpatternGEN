@@ -76,11 +76,11 @@ class EMPchannel :
     def getLatency(self, ch2) :
         i=0
         j=0
-        while self.chan[i].valid==0 :
+        while self.chan[i].valid==0 and i<self.nFrames()-1 :
             i+=1
-        while ch2.chan[j].valid==0 :
+        while ch2.chan[j].valid==0 and j<ch2.nFrames()-1 :
             j+=1
-        print(np.abs(i-j))
+        return np.abs(i-j)
 				
     def plotFrame(self):
         X=[]
@@ -98,16 +98,39 @@ class EMPchannel :
     def __eq__(self,ch2) :
         self_list=[]
         ch2_list=[]
+        latency=self.getLatency(ch2)
         for i in range(0, len(self.chan)):
             if self.chan[i].valid==1 :
                 self_list.append(self.chan[i].word)
             if ch2.chan[i].valid==1 :
                 ch2_list.append(ch2.chan[i].word)
-        if len(self_list)!=len(ch2_list):
-            return False
-        else:
+        if latency==0:
+            if len(self_list)!=len(ch2_list):
+                return False
+            else:
+                return self_list==ch2_list
+        else :                                   #case where 1 list is longer than the other because of the latency
+            if len(ch2_list)>len(self_list):    #then we remove the last words from the longer list, because they could not be transmitted
+                for j in range(0, latency):
+                    ch2_list.pop(-1)
+            else :       
+                for k in range(0, latency):
+                    self_list.pop(-1)
             return self_list==ch2_list
-            
+
+    def checkProgressive(self):
+        self_list=[]
+        for i in range(0, len(self.chan)):
+            if self.chan[i].valid==1 :
+                self_list.append(self.chan[i].word)
+        if len(self_list)>=2:
+            j=0
+            while self_list[j+1]-self_list[j]==1 and j<len(self_list)-2:
+                j+=1        
+            return j==len(self_list)-2
+        else:
+            return False    
+
 
 class EMPpattern :
 
@@ -205,30 +228,37 @@ class EMPpattern :
 
     def __eq__(self,EP2) : 
         if self.nChannels!=EP2.nChannels:
+            print('The two files do not have the same number of channels')
             return False
         else:
-            i=0
-            while self.channels[i]==EP2.channels[i] and i<self.nChannels-1:
-                i+=1
-            return i==self.nChannels-1
+            j=0
+            for i in range (0, self.nChannels):
+                if self.channels[i]==EP2.channels[i]:
+                    j+=1
+                    print(f'Channel {i} = Channel {i}.') 
+                else :
+                    print(f'Channel {i} is not equal to Channel {i}.') 
+            return j==self.nChannels
 
 
 
 def main() :
     EP = EMPpattern()
-    EP.loadPattern('../ev9_n1_proc0.txt')
-    #channel1=EP.channels[0]
-    #channel2=EP.channels[1]
+    EP.loadPattern('../txt files/rx_summary.txt')
+    channel1=EP.channels[21]
+    
     #channel1.plotFrame()
     #print(channel1.chan[6].word)
    
     #EP = EMPpattern(nChannels=10)
     #EP.genSeq(100)
     EP2 = EMPpattern()
-    EP2.loadPattern('../ev9_n2_proc0.txt')
-    print(EP==EP2)
+    EP2.loadPattern('../txt files/rx_summary.txt')
+    channel2=EP2.channels[22]
+    #print(EP==EP2)
+    print(channel1.checkProgressive())
     #channel1.getLatency(channel2)
-    #print(EP==EP)
+    print(channel2.checkProgressive())
     #EP.genSeq(100)
     #EP.print()
 
