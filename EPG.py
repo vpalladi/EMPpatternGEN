@@ -73,7 +73,7 @@ class EMPchannel :
             print()
         print()
 
-    def getLatency(self, ch2) :
+    def getLatency(self, ch2) : #gets the latency between two channels by comparing the first valid words : made to compare one single transmission and reception
         i=0
         j=0
         while self.chan[i].valid==0 and i<self.nFrames()-1 :
@@ -81,6 +81,20 @@ class EMPchannel :
         while ch2.chan[j].valid==0 and j<ch2.nFrames()-1 :
             j+=1
         return np.abs(i-j)
+
+    def getLatency_continuous(self,ch2) : #gets the latency between two channels by comparing the words : made to compare repeated transmissions and receptions
+        j=0
+        while self.chan[j].valid==0 and j<self.nFrames()-1:   #loop to consider the first valid word
+            j+=1
+        print(j)
+        i=0
+        while (self.chan[j].word!=ch2.chan[i].word or self.chan[j].valid!=ch2.chan[i].valid) and (i<ch2.nFrames()-1):
+           i+=1
+        if i==ch2.nFrames()-1:
+            print ("The channel did not receive anything")
+        else :
+            return np.abs(i-j)
+            
 				
     def plotFrame(self):
         X=[]
@@ -240,12 +254,21 @@ class EMPpattern :
                     print(f'Channel {i} is not equal to Channel {i}.') 
             return j==self.nChannels
 
+    def getLatency_continuous(self, EP2):
+        for i in range(0, self.nChannels):
+            x=self.channels[i].getLatency(EP2.channels[i])
+            if x==self.channels[i].nFrames()-1:
+                print(f'Channel {i} did not receive anything')
+            else:
+                print(f"The latency in Channel {i} is :", x)   
 
 
 def main() :
     EP = EMPpattern()
-    EP.loadPattern('../txt files/rx_summary.txt')
-    channel1=EP.channels[21]
+    EP.loadPattern('../txt files/tx_summary.txt')
+    channel1=EP.channels[13]
+
+    #channel2=EP.channels[20]
     
     #channel1.plotFrame()
     #print(channel1.chan[6].word)
@@ -254,13 +277,15 @@ def main() :
     #EP.genSeq(100)
     EP2 = EMPpattern()
     EP2.loadPattern('../txt files/rx_summary.txt')
-    channel2=EP2.channels[22]
+    channel2=EP2.channels[13]
     #print(EP==EP2)
-    print(channel1.checkProgressive())
+    #print(channel1.checkProgressive())
     #channel1.getLatency(channel2)
-    print(channel2.checkProgressive())
+    #print(channel2.checkProgressive())
     #EP.genSeq(100)
     #EP.print()
+    EP2.getLatency_continuous(EP)
+    
 
 
 main()
