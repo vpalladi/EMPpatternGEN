@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+#############################
+### EMP Pattern Generator ###
+#############################
+
 import random  
 import numpy as np
 import re
@@ -29,7 +33,7 @@ class EMPword :
 class EMPchannel :
 
     def __init__(self, quad=0, ch=0, link=0) :
-        self.chan = []
+        self.frames = []
         self.link = int(link)
         self.ch   = int(ch)
         self.quad = int(quad)
@@ -41,16 +45,16 @@ class EMPchannel :
         return format(self.link,'02d')
 
     def addFrame ( self, data ) :
-        self.chan.append(data)
+        self.frames.append(data)
     
     def setFrame( self, frameId, data ) :
         if frameId<len(self.chain) :
-            self.chan[frameId] = data
+            self.frames[frameId] = data
         else :
             print('Frame index out of range. (EMPchannel)')
     
     def getFrame(self, frameId) :
-        return self.chan[frameId]
+        return self.frames[frameId]
             
     def genRand(self, nFrames) :
         for i in range(0, nFrames) :
@@ -64,31 +68,37 @@ class EMPchannel :
             self.addFrame(w)
             
     def nFrames(self) :
-        l = len( self.chan )
+        l = len( self.frames )
         return l
 
     def print(self) :
-        for fr in self.chan :
+        for fr in self.frames :
             fr.printHex()
             print()
         print()
 
-    def getLatency(self, ch2) : #gets the latency between two channels by comparing the first valid words : made to compare one single transmission and reception
-        i=0
-        j=0
-        while self.chan[i].valid==0 and i<self.nFrames()-1 :
-            i+=1
-        while ch2.chan[j].valid==0 and j<ch2.nFrames()-1 :
-            j+=1
-        return np.abs(i-j)
 
-    def getLatency_continuous(self,ch2) : #gets the latency between two channels by comparing the words : made to compare repeated transmissions and receptions
+    def getLatency(self) : 
+        
+        for i,f in enumerate(self.frames) :
+            if f.valid == 1 :
+                return i
+        return -1
+
+
+    def getLatencyRelative(self, ch2) : #gets the latency between two channels by comparing the first valid words : made to compare one single transmission and reception
+        for i,frame in enumerate(self.frames) :
+            if frame.valid==1 :
+                return i
+        return -1
+
+    def getLatencyRelative_continuous(self,ch2) : #gets the latency between two channels by comparing the words : made to compare repeated transmissions and receptions
         j=0
-        while self.chan[j].valid==0 and j<self.nFrames()-1:   #loop to consider the first valid word
+        while self.frames[j].valid==0 and j<self.nFrames()-1:   #loop to consider the first valid word
             j+=1
         print(j)
         i=0
-        while (self.chan[j].word!=ch2.chan[i].word or self.chan[j].valid!=ch2.chan[i].valid) and (i<ch2.nFrames()-1):
+        while (self.frames[j].word!=ch2.chan[i].word or self.frames[j].valid!=ch2.chan[i].valid) and (i<ch2.nFrames()-1):
            i+=1
         if i==ch2.nFrames()-1:
             print ("The channel did not receive anything")
@@ -97,25 +107,22 @@ class EMPchannel :
             
 				
     def plotFrame(self):
-        X=[]
+        
         Y=[]
-        for i in range(0, len(self.chan)):
-            X.append(i)
-            Y.append(self.chan[i].word) #list of the numbers sent to the channel, integer format
-            plt.plot(X,Y)
-            plt.title("Data through the channel")
-            plt.ylabel('Numbers sent')
-            plt.xlabel('Frame number')
-            plt.savefig('./demo.png')
-            plt.close()
-	
+        for i in range(0, len(self.frames)) :
+            Y.append(self.frames[i].word & 0xfff) #list of the numbers sent to the channel, integer format
+        plt.xlable('Frame #')
+        plt.ylable('Word content & 0xfff')
+        plt.plot( range(0, len(self.frames) ), Y )
+
+
     def __eq__(self,ch2) :
         self_list=[]
         ch2_list=[]
         latency=self.getLatency(ch2)
-        for i in range(0, len(self.chan)):
-            if self.chan[i].valid==1 :
-                self_list.append(self.chan[i].word)
+        for i in range(0, len(self.frames)):
+            if self.frames[i].valid==1 :
+                self_list.append(self.frames[i].word)
             if ch2.chan[i].valid==1 :
                 ch2_list.append(ch2.chan[i].word)
         if latency==0:
@@ -133,17 +140,37 @@ class EMPchannel :
             return self_list==ch2_list
 
     def checkProgressive(self):
-        self_list=[]
-        for i in range(0, len(self.chan)):
-            if self.chan[i].valid==1 :
-                self_list.append(self.chan[i].word)
-        if len(self_list)>=2:
-            j=0
-            while self_list[j+1]-self_list[j]==1 and j<len(self_list)-2:
-                j+=1        
-            return j==len(self_list)-2
-        else:
-            return False    
+        previousFrame = self.frames[0]
+        for d in self.frames[1:] :
+            if d.word == previousData.word :
+                return True
+            else : 
+                return False
+
+
+        #self_list=[]
+        #for i in range(0, len(self.frames)):
+        #    if self.frames[i].valid==1 :
+        #        self_list.append(self.frames[i].word)
+        #if len(self_list)>=2:
+        #    j=0
+        #    while self_list[j+1]-self_list[j]==1 and j<len(self_list)-2:
+        #        j+=1        
+        #    return j==len(self_list)-2
+        #else:
+        #    return False    
+
+
+class EMPquad :
+
+    def __init__(self, quad=0) :
+        self.quad = quad
+
+    def setCh(self, ch) :
+        self.chs.append(ch)
+
+    def getChs(self) :
+        return self.chs
 
 
 class EMPpattern :
@@ -254,6 +281,13 @@ class EMPpattern :
                     print(f'Channel {i} is not equal to Channel {i}.') 
             return j==self.nChannels
 
+    def getLatency(self) :
+        latencies = []
+        for ch in self.channels :
+            latencies.append( ch.getLatency() )
+        return latencies
+            
+
     def getLatency_continuous(self, EP2):
         for i in range(0, self.nChannels):
             x=self.channels[i].getLatency(EP2.channels[i])
@@ -263,29 +297,29 @@ class EMPpattern :
                 print(f"The latency in Channel {i} is :", x)   
 
 
-def main() :
-    EP = EMPpattern()
-    EP.loadPattern('../txt files/tx_summary.txt')
-    channel1=EP.channels[13]
-
-    #channel2=EP.channels[20]
-    
-    #channel1.plotFrame()
-    #print(channel1.chan[6].word)
-   
-    #EP = EMPpattern(nChannels=10)
-    #EP.genSeq(100)
-    EP2 = EMPpattern()
-    EP2.loadPattern('../txt files/rx_summary.txt')
-    channel2=EP2.channels[13]
-    #print(EP==EP2)
-    #print(channel1.checkProgressive())
-    #channel1.getLatency(channel2)
-    #print(channel2.checkProgressive())
-    #EP.genSeq(100)
-    #EP.print()
-    EP2.getLatency_continuous(EP)
-    
-
-
-main()
+#def main() :
+#    EP = EMPpattern()
+#    EP.loadPattern('../txt files/tx_summary.txt')
+#    channel1=EP.channels[13]
+#
+#    #channel2=EP.channels[20]
+#    
+#    #channel1.plotFrame()
+#    #print(channel1.chan[6].word)
+#   
+#    #EP = EMPpattern(nChannels=10)
+#    #EP.genSeq(100)
+#    EP2 = EMPpattern()
+#    EP2.loadPattern('../txt files/rx_summary.txt')
+#    channel2=EP2.channels[13]
+#    #print(EP==EP2)
+#    #print(channel1.checkProgressive())
+#    #channel1.getLatency(channel2)
+#    #print(channel2.checkProgressive())
+#    #EP.genSeq(100)
+#    #EP.print()
+#    EP2.getLatency_continuous(EP)
+#    
+#
+#
+#main()
