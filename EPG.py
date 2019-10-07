@@ -8,6 +8,7 @@ import random
 import numpy as np
 import re
 import matplotlib.pyplot as plt
+import csv
 
 class EMPword :
     
@@ -184,7 +185,7 @@ class EMPpattern :
         for i in range(0, nChannels) :
             quad = int(i/4)
             chan = int(i%4)
-            self.channels.append( EMPchannel( quad=q, ch=c, link=l ) )
+            self.channels.append( EMPchannel( quad=quad, ch=chan, link=i ) )
         
     def loadPattern( self, fileName ) :
         fileIn = open(fileName)
@@ -242,6 +243,33 @@ class EMPpattern :
                 ch.addFrame( w )
             ch.addSOF()
 
+
+    # format #bit1,#val1,#bit2,#val2,...
+    def genFromCSV( self, CSVfileName ) :
+        for i,ch in enumerate(self.channels) :
+
+            print ('CH',i)
+            with open(CSVfileName) as csvfile:
+                CSVdata = csv.reader( csvfile )
+
+                ch.addSOF()
+                for i,r in enumerate( CSVdata ):
+                    print(r)
+                    value = 0
+                    shifts = r[0::2] # all the even 
+                    values = r[1::2] # all the odds
+                    shift = 0
+                    for s,v in zip( shifts, values ) :
+                        mask = 0
+                        for i in range(0, int(s) ) :
+                            mask = mask | (1<<i)
+                        value = value | ( ( int(v)&mask ) << shift )
+                        shift = shift + int(s)
+                        
+                    w = EMPword( value, True, 64 )
+                    ch.addFrame( w )
+                ch.addSOF()
+
             
     def print( self ) :
 
@@ -297,6 +325,14 @@ class EMPpattern :
                 print(f"The latency in Channel {i} is :", x)   
 
 
+def main() :
+
+    EP = EMPpattern('test', 3)
+    EP.genFromCSV('test.csv')
+    EP.print()
+main()
+
+    
 #def main() :
 #    EP = EMPpattern()
 #    EP.loadPattern('../txt files/tx_summary.txt')
