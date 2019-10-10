@@ -248,13 +248,11 @@ class EMPpattern :
     def genFromCSV( self, CSVfileName ) :
         for i,ch in enumerate(self.channels) :
 
-            print ('CH',i)
             with open(CSVfileName) as csvfile:
                 CSVdata = csv.reader( csvfile )
 
                 ch.addSOF()
                 for i,r in enumerate( CSVdata ):
-                    print(r)
                     value = 0
                     shifts = r[0::2] # all the even 
                     values = r[1::2] # all the odds
